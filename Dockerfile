@@ -1,6 +1,6 @@
 #Pull the python image from Docker hub
 #Use a lightweight python image
-FROM python:3.14-slim
+FROM python:3.11-slim
 
 #set the working directory
 WORKDIR /app

@@ -1,45 +1,190 @@
-#Github action workflow
-#Github automatically looks for workflow file inside .github/workflows
+# #Github actions workflows\
+# #Github automatically looks for worflow file inside .github/worflows/
+
+# #Give workflow a meaningful name
+
+# name: Iris ML API - CI Pipeline
+
+# #Define when Github should run this workflow
+# on:
+#   #Run CI whenever code is pushed to the main branch
+#   push:
+#     branches:
+#       - main
+#       #Also validate proposed chages before they are merged 
+#   pull_request:
+#     branches:
+#       - main
+
+# #permissions are restricted to reading repo content only
+# permissions:
+#   contents: read
+#   packages: write  #container registry permissions to push docker image to Github container registry
+
+# #Define the jobs that make up the pipeline
+# jobs:
+#      test:
+#         name: Run API Tests
+#         #Define the type of virtual machine to run the job on
+#         runs-on: ubuntu-latest
+#         #Step-1 Download the repo content to the runner
+#         steps:
+#           - name: Checkout code repository
+#             uses: actions/checkout@v4
+
+#         #step-2 Set up Python on runner
+#           - name: Set up Python on Runner
+#             uses: actions/setup-python@v4
+#             with:
+#               python-version: "3.14"
+
+#         #step-3 Install dependencies needed to run the tests
+#           - name: Install Python dependencies
+#             run: |
+#               python -m pip install --upgrade pip
+#               pip install -r requirements.txt
+#         #step-4 Run the tests
+#           - name: Run automated tests
+#             run: python -m pytest -v
+#       #JOB2 Build and publish Docker Image
+#      build:
+#         name: Build and Publish Docker Image
+#         needs: test
+#         runs-on: ubuntu-latest
+
+#         #Publish only when code is pushed to main
+
+
+#         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+#         steps:
+#         #Download repo source code
+#         -name: Checkout source code
+#         uses: actions/checkout@v4
+
+#         #Enable Docker Buildkit Functionallay
+#         -name: Set up Docker Buildx
+#         uses: docker/setup-buildx-action@v3
+
+#         #Authenticate to Github Container Registry GHCR
+#         -name: Login to GHCR
+#         uses: docker/login-action@v3
+#         with:
+#           registry: ghcr.io
+#           username: ${{ github.actor }}
+#           password: ${{ secrets.GITHUB_TOKEN }}
+#       #generate image name and tags
+#         -name: Generate Docker metadeta
+#         id: meta
+#         uses: docker/metadata-action@v5
+#         with:
+#         images: ghcr.io/${{github.repository}}
+#         tags: |
+#           type=raw, value=latest
+#           type=sha format=short
+
+#         #Build the docker image and push to GHCR
+#         -name: Build and push Docker image
+#         uses: docker/build-push-action@v6
+#         with:
+#           context: .
+#           push: true
+#           tags: ${{ steps.meta.outputs.tags }}
+#           labels: ${{ steps.meta.outputs.labels }}
+
+
+
+
+
+
+# GitHub Actions CI/CD Workflow
+
 name: Iris ML API - CI Pipeline
 
-#define when Github should run this workflow
+# Trigger workflow on push and pull requests
 on:
-    #Run CI whenever code is pushed to the main branch
-    push:
-        branches:
-            - main
-        #Also validate proposed changes before they are merged
-    pull_request:
-        branches:
-            - main
-#permission are restricted to reading repo content only
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+# Repository permissions
 permissions:
-    contents: read
+  contents: read
+  packages: write
 
-#define the job that make up the pipeline
 jobs:
-    test-and-build:
-        #Github provides a fresh Ubuntu VM for this job
-        runs-on: Ubuntu-latest
-        #Steps
-        steps:
-            #step-1 Download the repo content to the runner
-            - name: Check out repository
-              uses: actions/checkout@v4
 
-            #Step-2 Install python on runner
-            - name: Install Python on runner
-              uses: actions/setup-python@v5
-              with:
-                python-version: "3.14"
-            # Step-3 install the dependencies needed to run the tests
-            - name: Install Python Dependencies
-              run: |
-                python -m pip install --upgrade pip
-                pip install -r requirements.txt
-            #step-4 Execute the automated tests
-            - name: Run automated tests
-              run: python -m pytest -v
-            #step-5 Build image only after tests have passes
-            - name: Build Docker Image
-              run: docker build -t iris-ml-api:${{github.sha}}.
+  # JOB 1: Run API Tests
+  test:
+    name: Run API Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout repository
+      - name: Checkout code repository
+        uses: actions/checkout@v4
+
+      # Step 2: Setup Python
+      - name: Set up Python on Runner
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # Step 3: Install dependencies
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Step 4: Run automated tests
+      - name: Run automated tests
+        run: python -m pytest -v
+
+
+  # JOB 2: Build and Publish Docker Image
+  build:
+    name: Build and Publish Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+
+    # Publish only on push to main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      # Step 1: Checkout source code
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      # Step 2: Setup Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Step 3: Login to GitHub Container Registry
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 4: Generate Docker metadata
+      - name: Generate Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
+      # Step 5: Build and push Docker image
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

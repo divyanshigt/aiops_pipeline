@@ -1,6 +1,4 @@
 from fastapi.testclient import TestClient
-from flask import app
-
 from main import create_app
 import pytest
 
@@ -30,7 +28,11 @@ def test_health_endpoint(client):
     response = client.get("/health")
     assert response.status_code == 200
     #to reduce the if else use assert statement to check the response body
-    assert response.json() == {"status": "healthy"}
+    assert response.json() == {
+    "status": "healthy",
+    "model_name": "iris-classifier",
+    "model_version": "test-version"
+}
 
 def test_valid_iris_prediction(client):
     """Verify that the application can return a valid prediiction"""
@@ -44,7 +46,7 @@ def test_valid_iris_prediction(client):
     }
 
     #Send a simulated POSt request with JSON input
-    response = client.post("predict",json=payload)
+    response = client.post("/predict",json=payload)
 
     #Endpoint should accept the valid input
     assert response.status_code==200
